@@ -1,0 +1,9 @@
+{
+  "name": "AWHI Digital Clinic",
+  "short_name": "AWHI",
+  "description": "Practitioner-focused digital hauora clinic",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fbfcfa",
+  "theme_color": "#285f58"
+}
