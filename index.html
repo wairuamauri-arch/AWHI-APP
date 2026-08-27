@@ -10,54 +10,82 @@
   <title>AWHI Digital Clinic</title>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">AWHI</p>
-      <h1>Digital Hauora Clinic</h1>
+  <section id="auth-view" class="auth-view">
+    <div class="auth-shell">
+      <div class="auth-intro">
+        <p class="eyebrow">AWHI</p>
+        <h1>Digital Hauora Clinic</h1>
+        <h2>Practitioner sign in</h2>
+        <p>Secure access to the AWHI clinical workspace. During Phase One, use demo information only.</p>
+      </div>
+
+      <form id="login-form" class="login-card">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="username" required />
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+        <button id="login-button" class="primary-button" type="submit">Sign in securely</button>
+        <p id="auth-message" class="auth-message" role="status" aria-live="polite"></p>
+        <p class="small-print">AWHI does not offer public account registration. Practitioner accounts are provisioned separately.</p>
+      </form>
     </div>
-    <span class="badge">Phase One</span>
-  </header>
+  </section>
 
-  <main>
-    <section class="hero">
+  <div id="app-view" hidden>
+    <header class="topbar">
       <div>
-        <p class="eyebrow">Kia haumaru te mahi</p>
-        <h2>Your clinical workspace, built on a secure foundation.</h2>
-        <p>Phase One establishes the dashboard, practitioner access, client records and clinical note structure before advanced automation is added.</p>
+        <p class="eyebrow">AWHI</p>
+        <h1>Digital Hauora Clinic</h1>
       </div>
-      <div class="security-card">
-        <strong>Development mode</strong>
-        <p>Use demo information only. Real client records must wait until authentication, RLS and privacy testing are complete.</p>
+      <div class="account-area">
+        <span id="signed-in-user" class="signed-in-user"></span>
+        <button id="logout-button" class="secondary-button" type="button">Sign out</button>
       </div>
-    </section>
+    </header>
 
-    <section class="section-heading">
-      <div>
-        <p class="eyebrow">Foundation rooms</p>
-        <h2>AWHI Dashboard</h2>
-      </div>
-    </section>
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Kia haumaru te mahi</p>
+          <h2>Your clinical workspace, built on a secure foundation.</h2>
+          <p>Phase One establishes the dashboard, practitioner access, client records and clinical note structure before advanced automation is added.</p>
+        </div>
+        <div class="security-card">
+          <strong>Development mode</strong>
+          <p>Use demo information only. Real client records must wait until authentication, RLS and privacy testing are complete.</p>
+        </div>
+      </section>
 
-    <section class="grid" aria-label="AWHI modules">
-      <button class="module" data-module="clients"><span>01</span><h3>Clients</h3><p>Search, create and open authorised client records.</p></button>
-      <button class="module" data-module="notes"><span>02</span><h3>Session Notes</h3><p>Create structured DARP and SOAP notes.</p></button>
-      <button class="module" data-module="whare"><span>03</span><h3>Te Whare Tapa Whā</h3><p>Reserved for the interactive wellbeing space.</p></button>
-      <button class="module" data-module="reports"><span>04</span><h3>Reports</h3><p>Reserved for future clinical reporting tools.</p></button>
-      <button class="module" data-module="manaaki"><span>05</span><h3>Manaaki</h3><p>AI assistance comes after the secure clinical core.</p></button>
-      <button class="module" data-module="settings"><span>06</span><h3>Settings</h3><p>Practitioner profile, security and app preferences.</p></button>
-    </section>
+      <section class="section-heading">
+        <div>
+          <p class="eyebrow">Foundation rooms</p>
+          <h2>AWHI Dashboard</h2>
+        </div>
+      </section>
 
-    <section id="status" class="status-panel" aria-live="polite">
-      <p class="eyebrow">Build status</p>
-      <h2>Foundation shell is running.</h2>
-      <p>Select a room above. During Phase One these buttons confirm navigation structure while the secure backend is connected.</p>
-    </section>
-  </main>
+      <section class="grid" aria-label="AWHI modules">
+        <button class="module" data-module="clients"><span>01</span><h3>Clients</h3><p>Search, create and open authorised client records.</p></button>
+        <button class="module" data-module="notes"><span>02</span><h3>Session Notes</h3><p>Create structured DARP and SOAP notes.</p></button>
+        <button class="module" data-module="whare"><span>03</span><h3>Te Whare Tapa Whā</h3><p>Reserved for the interactive wellbeing space.</p></button>
+        <button class="module" data-module="reports"><span>04</span><h3>Reports</h3><p>Reserved for future clinical reporting tools.</p></button>
+        <button class="module" data-module="manaaki"><span>05</span><h3>Manaaki</h3><p>AI assistance comes after the secure clinical core.</p></button>
+        <button class="module" data-module="settings"><span>06</span><h3>Settings</h3><p>Practitioner profile, security and app preferences.</p></button>
+      </section>
 
-  <footer>
-    <p>AWHI Digital Clinic · Phase One secure foundation</p>
-  </footer>
+      <section id="status" class="status-panel" aria-live="polite">
+        <p class="eyebrow">Build status</p>
+        <h2>Authenticated foundation shell is running.</h2>
+        <p>You are signed in. The next Phase One build connects authorised client records to this workspace.</p>
+      </section>
+    </main>
 
-  <script src="app.js"></script>
+    <footer>
+      <p>AWHI Digital Clinic · Phase One secure foundation</p>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>
