@@ -138,3 +138,6 @@ with check (practitioner_id = auth.uid());
 -- IMPORTANT: Client creation and assignment should ultimately be handled by a
 -- trusted server-side function/transaction so a newly-created client receives
 -- its access row atomically. Do not expose service-role credentials in browser code.
+
+-- Phase One continuation is recorded as an ordered migration:
+-- supabase/migrations/20260910090000_secure_demo_clients.sql

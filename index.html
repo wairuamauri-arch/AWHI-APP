@@ -79,6 +79,66 @@
         <h2>Authenticated foundation shell is running.</h2>
         <p>You are signed in. The next Phase One build connects authorised client records to this workspace.</p>
       </section>
+
+      <section id="clients-workspace" class="workspace" hidden aria-labelledby="clients-title">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">Demo records only</p>
+            <h2 id="clients-title">Clients</h2>
+            <p>Create, search and open records using invented information while AWHI is being security-tested.</p>
+          </div>
+          <button id="close-clients" class="secondary-button" type="button">Back to dashboard</button>
+        </div>
+
+        <div class="demo-warning" role="note">
+          <strong>Safety gate:</strong> Do not enter a real name, date of birth, NHI number or clinical information yet.
+        </div>
+
+        <div class="client-layout">
+          <form id="client-form" class="panel-card">
+            <p class="eyebrow">New demo client</p>
+            <h3>Create a record</h3>
+
+            <label for="client-preferred-name">Preferred name</label>
+            <input id="client-preferred-name" name="preferred_name" maxlength="100" placeholder="Example: Demo Rimu" required />
+
+            <label for="client-family-name">Family name <span>(optional)</span></label>
+            <input id="client-family-name" name="family_name" maxlength="100" placeholder="Invented details only" />
+
+            <label for="client-date-of-birth">Date of birth <span>(optional)</span></label>
+            <input id="client-date-of-birth" name="date_of_birth" type="date" />
+
+            <button id="create-client-button" class="primary-button" type="submit">Create demo client</button>
+            <p id="client-form-message" class="form-message" role="status" aria-live="polite"></p>
+          </form>
+
+          <section class="panel-card client-browser" aria-labelledby="client-list-title">
+            <div class="client-browser-heading">
+              <div>
+                <p class="eyebrow">Authorised access</p>
+                <h3 id="client-list-title">Your demo clients</h3>
+              </div>
+              <button id="refresh-clients" class="secondary-button" type="button">Refresh</button>
+            </div>
+
+            <label class="search-label" for="client-search">Search clients</label>
+            <input id="client-search" type="search" placeholder="Search by name" autocomplete="off" />
+            <p id="client-list-message" class="form-message" role="status" aria-live="polite"></p>
+            <div id="client-list" class="client-list"></div>
+          </section>
+        </div>
+
+        <section id="client-detail" class="client-detail" hidden aria-labelledby="client-detail-title">
+          <p class="eyebrow">Open demo record</p>
+          <h3 id="client-detail-title"></h3>
+          <dl>
+            <div><dt>Date of birth</dt><dd id="detail-date-of-birth"></dd></div>
+            <div><dt>Status</dt><dd id="detail-status"></dd></div>
+            <div><dt>Created</dt><dd id="detail-created-at"></dd></div>
+          </dl>
+          <p class="small-print">Clinical notes are not enabled in this module yet.</p>
+        </section>
+      </section>
     </main>
 
     <footer>
