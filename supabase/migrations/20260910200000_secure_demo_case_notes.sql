@@ -15,6 +15,7 @@ alter table public.case_notes
   );
 
 drop policy if exists "case_note_update_own" on public.case_notes;
+drop policy if exists "case_note_update_own_draft" on public.case_notes;
 
 create policy "case_note_update_own_draft"
 on public.case_notes for update
