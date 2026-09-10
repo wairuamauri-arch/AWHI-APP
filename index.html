@@ -136,7 +136,59 @@
             <div><dt>Status</dt><dd id="detail-status"></dd></div>
             <div><dt>Created</dt><dd id="detail-created-at"></dd></div>
           </dl>
-          <p class="small-print">Clinical notes are not enabled in this module yet.</p>
+          <div class="record-actions">
+            <button id="new-note-button" class="primary-button" type="button">New DARP or SOAP note</button>
+          </div>
+          <div class="notes-heading">
+            <h4>Saved demo notes</h4>
+            <span id="notes-count"></span>
+          </div>
+          <p id="notes-message" class="form-message" role="status" aria-live="polite"></p>
+          <div id="notes-list" class="notes-list"></div>
+        </section>
+
+        <section id="note-editor" class="note-editor" hidden aria-labelledby="note-editor-title">
+          <div class="workspace-heading">
+            <div>
+              <p class="eyebrow">Demo clinical documentation</p>
+              <h3 id="note-editor-title">New session note</h3>
+              <p id="note-client-name" class="note-client-name"></p>
+            </div>
+            <button id="close-note-editor" class="secondary-button" type="button">Close note</button>
+          </div>
+
+          <form id="note-form">
+            <div class="note-meta-grid">
+              <label>Note format
+                <select id="note-type" name="note_type">
+                  <option value="DARP">DARP</option>
+                  <option value="SOAP">SOAP</option>
+                </select>
+              </label>
+              <label>Session date and time
+                <input id="session-at" name="session_at" type="datetime-local" required />
+              </label>
+              <label>Save as
+                <select id="note-status" name="status">
+                  <option value="draft">Draft</option>
+                  <option value="final">Final</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="note-fields">
+              <label><span id="note-label-1">Data</span><textarea id="note-field-1" maxlength="12000" required></textarea></label>
+              <label><span id="note-label-2">Assessment</span><textarea id="note-field-2" maxlength="12000" required></textarea></label>
+              <label><span id="note-label-3">Response</span><textarea id="note-field-3" maxlength="12000" required></textarea></label>
+              <label><span id="note-label-4">Plan</span><textarea id="note-field-4" maxlength="12000" required></textarea></label>
+            </div>
+
+            <div class="note-form-actions">
+              <button id="save-note-button" class="primary-button" type="submit">Save demo note</button>
+              <button id="clear-note-button" class="secondary-button" type="button">Start a new note</button>
+            </div>
+            <p id="note-form-message" class="form-message" role="status" aria-live="polite"></p>
+          </form>
         </section>
       </section>
     </main>
