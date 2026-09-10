@@ -51,6 +51,11 @@ const clearNoteButton = document.querySelector('#clear-note-button');
 const noteFormMessage = document.querySelector('#note-form-message');
 const noteLabels = [1, 2, 3, 4].map((number) => document.querySelector(`#note-label-${number}`));
 const noteFields = [1, 2, 3, 4].map((number) => document.querySelector(`#note-field-${number}`));
+const securityWorkspace = document.querySelector('#security-workspace');
+const closeSecurityButton = document.querySelector('#close-security');
+const refreshAuditButton = document.querySelector('#refresh-audit');
+const auditMessage = document.querySelector('#audit-message');
+const auditList = document.querySelector('#audit-list');
 
 let authorisedClients = [];
 let selectedClient = null;
@@ -84,6 +89,7 @@ function setMessage(element, message = '', state = '') {
 function showDashboard() {
   dashboardSections.forEach((section) => { section.hidden = false; });
   clientsWorkspace.hidden = true;
+  securityWorkspace.hidden = true;
   clientDetail.hidden = true;
   noteEditor.hidden = true;
 }
@@ -93,6 +99,36 @@ async function showClientsWorkspace() {
   clientsWorkspace.hidden = false;
   clientsWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
   await loadClients();
+}
+
+async function showSecurityWorkspace() {
+  dashboardSections.forEach((section) => { section.hidden = true; });
+  clientsWorkspace.hidden = true;
+  securityWorkspace.hidden = false;
+  await loadAuditEvents();
+}
+
+async function loadAuditEvents() {
+  setMessage(auditMessage, 'Loading your security activity…');
+  refreshAuditButton.disabled = true;
+  const { data, error } = await supabase.from('audit_events')
+    .select('id, action, entity_type, metadata, occurred_at')
+    .order('occurred_at', { ascending: false }).limit(50);
+  refreshAuditButton.disabled = false;
+  auditList.replaceChildren();
+  if (error) { setMessage(auditMessage, 'AWHI could not load the activity register.', 'error'); return; }
+  if (!data?.length) { setMessage(auditMessage, 'No activity has been recorded yet.'); return; }
+  setMessage(auditMessage, `${data.length} recent event${data.length === 1 ? '' : 's'}.`);
+  data.forEach((event) => {
+    const row = document.createElement('div'); row.className = 'audit-row';
+    const icon = document.createElement('span'); icon.className = 'audit-icon'; icon.textContent = event.entity_type === 'client' ? 'C' : 'N';
+    const detail = document.createElement('div');
+    const title = document.createElement('strong'); title.textContent = event.action.split('.').map((part) => part[0].toUpperCase() + part.slice(1)).join(' ');
+    const meta = document.createElement('small'); meta.textContent = [event.metadata?.note_type, event.metadata?.status].filter(Boolean).join(' · ') || 'No clinical content stored';
+    detail.append(title, meta);
+    const time = document.createElement('time'); time.textContent = new Intl.DateTimeFormat('en-NZ', { dateStyle:'medium', timeStyle:'short' }).format(new Date(event.occurred_at));
+    row.append(icon, detail, time); auditList.append(row);
+  });
 }
 
 function formatClientName(client) {
@@ -321,6 +357,10 @@ document.querySelectorAll('.module').forEach((button) => {
       await showClientsWorkspace();
       return;
     }
+    if (button.dataset.module === 'settings') {
+      await showSecurityWorkspace();
+      return;
+    }
     const [title, body] = moduleMessages[button.dataset.module];
     statusPanel.innerHTML = `<p class="eyebrow">Selected room</p><h2>${title}</h2><p>${body}</p>`;
     statusPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -362,6 +402,8 @@ clientForm.addEventListener('submit', async (event) => {
 clientSearch.addEventListener('input', renderClientList);
 refreshClientsButton.addEventListener('click', loadClients);
 closeClientsButton.addEventListener('click', showDashboard);
+closeSecurityButton.addEventListener('click', showDashboard);
+refreshAuditButton.addEventListener('click', loadAuditEvents);
 newNoteButton.addEventListener('click', showNewNote);
 clearNoteButton.addEventListener('click', showNewNote);
 closeNoteEditorButton.addEventListener('click', () => { noteEditor.hidden = true; });

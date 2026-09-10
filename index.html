@@ -191,6 +191,28 @@
           </form>
         </section>
       </section>
+
+      <section id="security-workspace" class="workspace" hidden aria-labelledby="security-title">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">Security and accountability</p>
+            <h2 id="security-title">My Activity Register</h2>
+            <p>A content-free record of your AWHI activity. Clinical note text is never copied into this log.</p>
+          </div>
+          <button id="close-security" class="secondary-button" type="button">Back to dashboard</button>
+        </div>
+        <div class="security-summary">
+          <div><strong>RLS tested</strong><span>Practitioner records are separated</span></div>
+          <div><strong>Audit protected</strong><span>Only your own events are visible</span></div>
+          <div><strong>Demo mode</strong><span>No real client information yet</span></div>
+        </div>
+        <div class="client-browser-heading">
+          <h3>Recent activity</h3>
+          <button id="refresh-audit" class="secondary-button" type="button">Refresh</button>
+        </div>
+        <p id="audit-message" class="form-message" role="status" aria-live="polite"></p>
+        <div id="audit-list" class="audit-list"></div>
+      </section>
     </main>
 
     <footer>

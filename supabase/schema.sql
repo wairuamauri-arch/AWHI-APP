@@ -142,3 +142,4 @@ with check (practitioner_id = auth.uid());
 -- Phase One continuation is recorded as an ordered migration:
 -- supabase/migrations/20260910090000_secure_demo_clients.sql
 -- supabase/migrations/20260910200000_secure_demo_case_notes.sql
+-- supabase/migrations/20260910203000_security_audit_events.sql
