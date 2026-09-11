@@ -19,7 +19,7 @@ const logoutButton = document.querySelector('#logout-button');
 const authMessage = document.querySelector('#auth-message');
 const signedInUser = document.querySelector('#signed-in-user');
 const statusPanel = document.querySelector('#status');
-const dashboardSections = document.querySelectorAll('.hero, .section-heading, .grid, #status');
+const dashboardSections = document.querySelectorAll('.hero, .section-heading, .grid, #status, #dashboard-summary, #reminder-banner');
 const clientsWorkspace = document.querySelector('#clients-workspace');
 const closeClientsButton = document.querySelector('#close-clients');
 const clientForm = document.querySelector('#client-form');
@@ -95,6 +95,9 @@ const profileName = document.querySelector('#profile-name');
 const profileMessage = document.querySelector('#profile-message');
 const passwordForm = document.querySelector('#password-form');
 const passwordMessage = document.querySelector('#password-message');
+const toggleClientStatusButton = document.querySelector('#toggle-client-status');
+const reminderBanner = document.querySelector('#reminder-banner');
+const exportMessage = document.querySelector('#export-message');
 
 let authorisedClients = [];
 let selectedClient = null;
@@ -114,12 +117,34 @@ function renderSession(session) {
   appView.hidden = !signedIn;
   signedInUser.textContent = signedIn ? session.user.email ?? 'Practitioner' : '';
   if (!signedIn) loginForm.reset();
+  if (signedIn) loadDashboardSummary();
   if (!signedIn) {
     authorisedClients = [];
     selectedClient = null;
     savedNotes = [];
     showDashboard();
   }
+}
+
+async function loadDashboardSummary() {
+  const { data:userData }=await supabase.auth.getUser(); if(!userData.user)return;
+  const userId=userData.user.id;
+  const [clientsResult,appointmentsResult,notesResult]=await Promise.all([
+    supabase.from('clients').select('id,status'),
+    supabase.from('appointments').select('scheduled_at,status').eq('practitioner_id',userId),
+    supabase.from('case_notes').select('status').eq('practitioner_id',userId)
+  ]);
+  if(clientsResult.error||appointmentsResult.error||notesResult.error)return;
+  const now=new Date(); const today=new Date(now.getFullYear(),now.getMonth(),now.getDate()); const tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);
+  const open=(appointmentsResult.data??[]).filter((item)=>item.status==='scheduled');
+  const overdue=open.filter((item)=>new Date(item.scheduled_at)<now).length;
+  const dueToday=open.filter((item)=>{const due=new Date(item.scheduled_at);return due>=now&&due<tomorrow;}).length;
+  document.querySelector('#summary-clients').textContent=(clientsResult.data??[]).filter((item)=>item.status==='active').length;
+  document.querySelector('#summary-overdue').textContent=overdue;
+  document.querySelector('#summary-today').textContent=dueToday;
+  document.querySelector('#summary-drafts').textContent=(notesResult.data??[]).filter((item)=>item.status==='draft').length;
+  reminderBanner.hidden=overdue+dueToday===0;
+  reminderBanner.textContent=overdue+dueToday ? `Manaaki reminder: ${overdue} overdue and ${dueToday} due today. Review your Follow-ups room.` : '';
 }
 
 function setMessage(element, message = '', state = '') {
@@ -135,6 +160,7 @@ function showDashboard() {
   extraWorkspaces.forEach((workspace) => { workspace.hidden = true; });
   clientDetail.hidden = true;
   noteEditor.hidden = true;
+  loadDashboardSummary();
 }
 
 async function showFollowupsWorkspace() {
@@ -225,7 +251,11 @@ function renderFollowups() {
     const detail = document.createElement('div'); const name = document.createElement('strong'); const meta = document.createElement('small');
     name.textContent = formatClientName(item.clients); meta.textContent = `${new Intl.DateTimeFormat('en-NZ', { dateStyle:'medium', timeStyle:'short' }).format(new Date(item.scheduled_at))} · ${item.contact_type.replace('_', ' ')} · ${item.purpose}`;
     detail.append(name, meta); row.append(badge, detail);
-    if (item.status === 'scheduled') { const done = document.createElement('button'); done.type = 'button'; done.className = 'secondary-button'; done.textContent = 'Complete'; done.addEventListener('click', () => completeFollowup(item.id)); row.append(done); }
+    if (item.status === 'scheduled') {
+      const actions=document.createElement('div');actions.className='outcome-actions';
+      [['Complete','completed'],['No show','no_show'],['Cancel','cancelled']].forEach(([label,status])=>{const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent=label;button.addEventListener('click',()=>setFollowupOutcome(item.id,status));actions.append(button);});
+      row.append(actions);
+    }
     followupList.append(row);
   });
 }
@@ -239,9 +269,9 @@ async function loadFollowups() {
   followups = data ?? []; renderFollowups();
 }
 
-async function completeFollowup(id) {
-  const { error } = await supabase.from('appointments').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', id);
-  if (error) { setMessage(followupListMessage, 'The follow-up could not be completed.', 'error'); return; }
+async function setFollowupOutcome(id,status) {
+  const { error } = await supabase.from('appointments').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { setMessage(followupListMessage, 'The follow-up outcome could not be saved.', 'error'); return; }
   await loadFollowups();
 }
 
@@ -330,6 +360,7 @@ async function openClient(client) {
   document.querySelector('#detail-risk').textContent = client.risk_level.replace('_', ' ');
   document.querySelector('#detail-alert').textContent = client.alert_active ? 'Active' : 'None';
   clientConsent.value = client.consent_status; clientRisk.value = client.risk_level; clientAlert.checked = client.alert_active; clientSafetyPlan.value = client.safety_plan ?? '';
+  toggleClientStatusButton.textContent = client.status === 'archived' ? 'Restore demo client' : 'Archive demo client';
   clientDetail.hidden = false;
   noteEditor.hidden = true;
   await loadNotes();
@@ -658,6 +689,14 @@ safetyForm.addEventListener('submit', async (event) => {
   Object.assign(selectedClient,updates); setMessage(safetyMessage,'Demo safety details saved.','success'); await openClient(selectedClient);
 });
 
+toggleClientStatusButton.addEventListener('click',async()=>{
+  if(!selectedClient)return;
+  const status=selectedClient.status==='archived'?'active':'archived';
+  const {error}=await supabase.from('clients').update({status,updated_at:new Date().toISOString()}).eq('id',selectedClient.id);
+  if(error){setMessage(safetyMessage,'The client status could not be changed.','error');return;}
+  selectedClient.status=status; detailStatus.textContent=status; toggleClientStatusButton.textContent=status==='archived'?'Restore demo client':'Archive demo client'; await loadClients();
+});
+
 whareForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const { data:userData,error:userError }=await supabase.auth.getUser();
@@ -687,6 +726,25 @@ document.querySelector('#print-report').addEventListener('click',()=>window.prin
 
 profileForm.addEventListener('submit',async(event)=>{event.preventDefault();const {data:user}=await supabase.auth.getUser();const {error}=await supabase.from('practitioners').update({display_name:profileName.value.trim()}).eq('id',user.user.id);setMessage(profileMessage,error?'Profile could not be saved.':'Profile saved.',error?'error':'success');});
 passwordForm.addEventListener('submit',async(event)=>{event.preventDefault();const password=document.querySelector('#new-password').value;const confirm=document.querySelector('#confirm-password').value;if(password!==confirm){setMessage(passwordMessage,'The passwords do not match.','error');return;}const {error}=await supabase.auth.updateUser({password});if(error){setMessage(passwordMessage,'Password could not be updated. You may need to sign in again.','error');return;}passwordForm.reset();setMessage(passwordMessage,'Password updated securely.','success');});
+
+document.querySelector('#export-demo-data').addEventListener('click',async()=>{
+  setMessage(exportMessage,'Preparing your authorised demo records…');
+  const {data:userData}=await supabase.auth.getUser(); if(!userData.user){setMessage(exportMessage,'Your session has expired.','error');return;}
+  const userId=userData.user.id;
+  const results=await Promise.all([
+    supabase.from('practitioners').select('display_name,role,created_at').eq('id',userId),
+    supabase.from('clients').select('*'),
+    supabase.from('case_notes').select('*').eq('practitioner_id',userId),
+    supabase.from('appointments').select('*').eq('practitioner_id',userId),
+    supabase.from('wellbeing_assessments').select('*').eq('practitioner_id',userId),
+    supabase.from('audit_events').select('action,entity_type,entity_id,client_id,metadata,occurred_at').eq('actor_id',userId)
+  ]);
+  if(results.some((result)=>result.error)){setMessage(exportMessage,'The demo export could not be prepared.','error');return;}
+  const payload={exported_at:new Date().toISOString(),mode:'AWHI demo only',practitioner:results[0].data,clients:results[1].data,case_notes:results[2].data,appointments:results[3].data,wellbeing_assessments:results[4].data,audit_events:results[5].data};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download=`awhi-demo-export-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(url);
+  setMessage(exportMessage,'Your authorised demo export was downloaded.','success');
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));

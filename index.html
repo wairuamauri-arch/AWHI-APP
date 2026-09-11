@@ -58,6 +58,14 @@
         </div>
       </section>
 
+      <section id="dashboard-summary" class="dashboard-summary" aria-label="Workload summary">
+        <div><strong id="summary-clients">—</strong><span>Active demo clients</span></div>
+        <div><strong id="summary-overdue">—</strong><span>Overdue follow-ups</span></div>
+        <div><strong id="summary-today">—</strong><span>Due today</span></div>
+        <div><strong id="summary-drafts">—</strong><span>Draft notes</span></div>
+      </section>
+      <p id="reminder-banner" class="reminder-banner" hidden role="status"></p>
+
       <section class="section-heading">
         <div>
           <p class="eyebrow">Foundation rooms</p>
@@ -78,7 +86,7 @@
       <section id="status" class="status-panel" aria-live="polite">
         <p class="eyebrow">Build status</p>
         <h2>Authenticated foundation shell is running.</h2>
-        <p>You are signed in. The next Phase One build connects authorised client records to this workspace.</p>
+        <p>You are signed in. Secure demo clients, notes, follow-ups, wellbeing, reports and audit controls are connected.</p>
       </section>
 
       <section id="clients-workspace" class="workspace" hidden aria-labelledby="clients-title">
@@ -149,6 +157,7 @@
           </form>
           <div class="record-actions">
             <button id="new-note-button" class="primary-button" type="button">New DARP or SOAP note</button>
+            <button id="toggle-client-status" class="secondary-button" type="button">Archive demo client</button>
           </div>
           <div class="notes-heading">
             <h4>Saved demo notes</h4>
@@ -278,6 +287,7 @@
           <form id="profile-form" class="panel-card"><h3>Practitioner profile</h3><label>Display name<input id="profile-name" maxlength="120" required /></label><button class="primary-button" type="submit">Save profile</button><p id="profile-message" class="form-message" role="status"></p></form>
           <form id="password-form" class="panel-card"><h3>Change password</h3><label>New password<input id="new-password" type="password" minlength="12" autocomplete="new-password" required /></label><label>Confirm password<input id="confirm-password" type="password" minlength="12" autocomplete="new-password" required /></label><button class="primary-button" type="submit">Update password</button><p id="password-message" class="form-message" role="status"></p></form>
         </div>
+        <div class="panel-card data-controls"><h3>Demo data portability</h3><p>Download the records visible to your practitioner account. Keep the file secure and do not use this while AWHI remains demo-only for real client information.</p><button id="export-demo-data" class="secondary-button" type="button">Download my demo data</button><p id="export-message" class="form-message" role="status"></p></div>
         <div class="client-browser-heading">
           <h3>Recent activity</h3>
           <button id="refresh-audit" class="secondary-button" type="button">Refresh</button>
