@@ -644,8 +644,16 @@ noteForm.addEventListener('submit', async (event) => {
     updated_at: new Date().toISOString()
   };
 
+  const editableNote = {
+    session_at: noteRecord.session_at,
+    note_type: noteRecord.note_type,
+    content: noteRecord.content,
+    status: noteRecord.status,
+    updated_at: noteRecord.updated_at
+  };
+
   const response = selectedNoteId
-    ? await supabase.from('case_notes').update(noteRecord).eq('id', selectedNoteId).select('id').single()
+    ? await supabase.from('case_notes').update(editableNote).eq('id', selectedNoteId).select('id').single()
     : await supabase.from('case_notes').insert(noteRecord).select('id').single();
 
   saveNoteButton.disabled = false;

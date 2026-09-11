@@ -1,4 +1,4 @@
-const CACHE = 'awhi-shell-v8';
+const CACHE = 'awhi-shell-v9';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
