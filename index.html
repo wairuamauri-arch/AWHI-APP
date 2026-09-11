@@ -69,9 +69,9 @@
         <button class="module" data-module="clients"><span>01</span><h3>Clients</h3><p>Search, create and open authorised client records.</p></button>
         <button class="module" data-module="notes"><span>02</span><h3>Session Notes</h3><p>Create structured DARP and SOAP notes.</p></button>
         <button class="module" data-module="followups"><span>03</span><h3>Follow-ups</h3><p>Schedule and track your authorised demo client contacts.</p></button>
-        <button class="module" data-module="whare"><span>04</span><h3>Te Whare Tapa Whā</h3><p>Reserved for the interactive wellbeing space.</p></button>
-        <button class="module" data-module="reports"><span>05</span><h3>Reports</h3><p>Reserved for future clinical reporting tools.</p></button>
-        <button class="module" data-module="manaaki"><span>06</span><h3>Manaaki</h3><p>AI assistance comes after the secure clinical core.</p></button>
+        <button class="module" data-module="whare"><span>04</span><h3>Te Whare Tapa Whā</h3><p>Record four-pou wellbeing and Mauri progress.</p></button>
+        <button class="module" data-module="reports"><span>05</span><h3>Reports</h3><p>Prepare and print a demo clinical summary.</p></button>
+        <button class="module" data-module="manaaki"><span>06</span><h3>Manaaki</h3><p>A private workload check-in without external AI.</p></button>
         <button class="module" data-module="settings"><span>07</span><h3>Settings</h3><p>Practitioner profile, security and app preferences.</p></button>
       </section>
 
@@ -136,7 +136,17 @@
             <div><dt>Date of birth</dt><dd id="detail-date-of-birth"></dd></div>
             <div><dt>Status</dt><dd id="detail-status"></dd></div>
             <div><dt>Created</dt><dd id="detail-created-at"></dd></div>
+            <div><dt>Consent</dt><dd id="detail-consent"></dd></div>
+            <div><dt>Risk</dt><dd id="detail-risk"></dd></div>
+            <div><dt>Safety alert</dt><dd id="detail-alert"></dd></div>
           </dl>
+          <form id="safety-form" class="safety-form">
+            <label>Consent status<select id="client-consent"><option value="not_recorded">Not recorded</option><option value="verbal">Verbal</option><option value="written">Written</option><option value="declined">Declined</option></select></label>
+            <label>Practitioner risk assessment<select id="client-risk"><option value="not_assessed">Not assessed</option><option value="low">Low</option><option value="moderate">Moderate</option><option value="high">High</option><option value="immediate">Immediate</option></select></label>
+            <label class="checkbox-label"><input id="client-alert" type="checkbox" /> Active safety alert</label>
+            <label class="wide-field">Safety plan<textarea id="client-safety-plan" maxlength="4000" placeholder="Demo information only"></textarea></label>
+            <button id="save-safety" class="secondary-button" type="submit">Save safety details</button><p id="safety-message" class="form-message" role="status"></p>
+          </form>
           <div class="record-actions">
             <button id="new-note-button" class="primary-button" type="button">New DARP or SOAP note</button>
           </div>
@@ -193,6 +203,34 @@
         </section>
       </section>
 
+      <section id="whare-workspace" class="workspace" hidden aria-labelledby="whare-title">
+        <div class="workspace-heading"><div><p class="eyebrow">Te Whare Tapa Whā</p><h2 id="whare-title">Mauri & Wellbeing</h2><p>Record a strengths-based snapshot across the four pou.</p></div><button id="close-whare" class="secondary-button" type="button">Back to dashboard</button></div>
+        <div class="demo-warning"><strong>Clinical reminder:</strong> This supports practitioner judgement; it does not calculate or replace a formal risk assessment.</div>
+        <form id="whare-form" class="panel-card">
+          <label>Demo client<select id="whare-client" required></select></label>
+          <div class="pou-grid">
+            <label>Taha tinana <span>Physical</span><input id="pou-tinana" type="range" min="1" max="5" value="3" /></label>
+            <label>Taha hinengaro <span>Mental/emotional</span><input id="pou-hinengaro" type="range" min="1" max="5" value="3" /></label>
+            <label>Taha whānau <span>Relationships</span><input id="pou-whanau" type="range" min="1" max="5" value="3" /></label>
+            <label>Taha wairua <span>Spiritual</span><input id="pou-wairua" type="range" min="1" max="5" value="3" /></label>
+          </div>
+          <div id="mauri-score" class="mauri-score">Mauri: 12 / 20 · 60%</div>
+          <div class="note-fields"><label>Strengths<textarea id="whare-strengths" maxlength="4000"></textarea></label><label>Support needs<textarea id="whare-needs" maxlength="4000"></textarea></label><label>Risk concerns<textarea id="whare-risks" maxlength="4000"></textarea></label><label>Goals / Plan<textarea id="whare-plan" maxlength="4000"></textarea></label></div>
+          <button id="save-whare" class="primary-button" type="submit">Save demo wellbeing snapshot</button><p id="whare-message" class="form-message" role="status"></p>
+        </form>
+      </section>
+
+      <section id="reports-workspace" class="workspace" hidden aria-labelledby="reports-title">
+        <div class="workspace-heading"><div><p class="eyebrow">Demo reporting</p><h2 id="reports-title">Clinical Summary</h2><p>Build a printable summary from authorised saved information.</p></div><button id="close-reports" class="secondary-button" type="button">Back to dashboard</button></div>
+        <div class="report-controls"><label>Demo client<select id="report-client"></select></label><button id="generate-report" class="primary-button" type="button">Generate summary</button><button id="print-report" class="secondary-button" type="button">Print / Save PDF</button></div>
+        <p id="report-message" class="form-message" role="status"></p><article id="report-preview" class="report-preview"></article>
+      </section>
+
+      <section id="manaaki-workspace" class="workspace" hidden aria-labelledby="manaaki-title">
+        <div class="workspace-heading"><div><p class="eyebrow">Manaaki</p><h2 id="manaaki-title">Private Practice Check-in</h2><p>A local summary of your workload. No clinical information is sent to an AI service.</p></div><button id="close-manaaki" class="secondary-button" type="button">Back to dashboard</button></div>
+        <div id="manaaki-summary" class="security-summary"></div><div class="panel-card"><h3>Suggested focus</h3><ol id="manaaki-priorities"></ol></div>
+      </section>
+
       <section id="followups-workspace" class="workspace" hidden aria-labelledby="followups-title">
         <div class="workspace-heading">
           <div><p class="eyebrow">Secure demo scheduling</p><h2 id="followups-title">Appointments & Follow-ups</h2><p>Plan your next client contacts and keep overdue mahi visible.</p></div>
@@ -235,6 +273,10 @@
           <div><strong>RLS tested</strong><span>Practitioner records are separated</span></div>
           <div><strong>Audit protected</strong><span>Only your own events are visible</span></div>
           <div><strong>Demo mode</strong><span>No real client information yet</span></div>
+        </div>
+        <div class="settings-grid">
+          <form id="profile-form" class="panel-card"><h3>Practitioner profile</h3><label>Display name<input id="profile-name" maxlength="120" required /></label><button class="primary-button" type="submit">Save profile</button><p id="profile-message" class="form-message" role="status"></p></form>
+          <form id="password-form" class="panel-card"><h3>Change password</h3><label>New password<input id="new-password" type="password" minlength="12" autocomplete="new-password" required /></label><label>Confirm password<input id="confirm-password" type="password" minlength="12" autocomplete="new-password" required /></label><button class="primary-button" type="submit">Update password</button><p id="password-message" class="form-message" role="status"></p></form>
         </div>
         <div class="client-browser-heading">
           <h3>Recent activity</h3>

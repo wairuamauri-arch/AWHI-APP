@@ -69,6 +69,32 @@ const followupFormMessage = document.querySelector('#followup-form-message');
 const followupListMessage = document.querySelector('#followup-list-message');
 const followupList = document.querySelector('#followup-list');
 const refreshFollowupsButton = document.querySelector('#refresh-followups');
+const whareWorkspace = document.querySelector('#whare-workspace');
+const reportsWorkspace = document.querySelector('#reports-workspace');
+const manaakiWorkspace = document.querySelector('#manaaki-workspace');
+const extraWorkspaces = [whareWorkspace, reportsWorkspace, manaakiWorkspace];
+const whareForm = document.querySelector('#whare-form');
+const whareClient = document.querySelector('#whare-client');
+const pouInputs = ['tinana','hinengaro','whanau','wairua'].map((name) => document.querySelector(`#pou-${name}`));
+const mauriScore = document.querySelector('#mauri-score');
+const whareFields = ['strengths','needs','risks','plan'].map((name) => document.querySelector(`#whare-${name}`));
+const whareMessage = document.querySelector('#whare-message');
+const reportClient = document.querySelector('#report-client');
+const reportPreview = document.querySelector('#report-preview');
+const reportMessage = document.querySelector('#report-message');
+const manaakiSummary = document.querySelector('#manaaki-summary');
+const manaakiPriorities = document.querySelector('#manaaki-priorities');
+const safetyForm = document.querySelector('#safety-form');
+const clientConsent = document.querySelector('#client-consent');
+const clientRisk = document.querySelector('#client-risk');
+const clientAlert = document.querySelector('#client-alert');
+const clientSafetyPlan = document.querySelector('#client-safety-plan');
+const safetyMessage = document.querySelector('#safety-message');
+const profileForm = document.querySelector('#profile-form');
+const profileName = document.querySelector('#profile-name');
+const profileMessage = document.querySelector('#profile-message');
+const passwordForm = document.querySelector('#password-form');
+const passwordMessage = document.querySelector('#password-message');
 
 let authorisedClients = [];
 let selectedClient = null;
@@ -106,6 +132,7 @@ function showDashboard() {
   clientsWorkspace.hidden = true;
   securityWorkspace.hidden = true;
   followupsWorkspace.hidden = true;
+  extraWorkspaces.forEach((workspace) => { workspace.hidden = true; });
   clientDetail.hidden = true;
   noteEditor.hidden = true;
 }
@@ -115,6 +142,7 @@ async function showFollowupsWorkspace() {
   clientsWorkspace.hidden = true;
   securityWorkspace.hidden = true;
   followupsWorkspace.hidden = false;
+  extraWorkspaces.forEach((workspace) => { workspace.hidden = true; });
   await loadClients();
   followupClient.replaceChildren();
   authorisedClients.forEach((client) => {
@@ -127,6 +155,46 @@ async function showFollowupsWorkspace() {
   saveFollowupButton.disabled = authorisedClients.length === 0;
   setMessage(followupFormMessage, authorisedClients.length ? '' : 'Create a demo client before scheduling a follow-up.');
   await loadFollowups();
+}
+
+function fillClientSelect(select) {
+  select.replaceChildren();
+  authorisedClients.forEach((client) => {
+    const option = document.createElement('option'); option.value = client.id; option.textContent = formatClientName(client); select.append(option);
+  });
+}
+
+async function showWhareWorkspace() {
+  dashboardSections.forEach((section) => { section.hidden = true; });
+  clientsWorkspace.hidden = true; securityWorkspace.hidden = true; followupsWorkspace.hidden = true;
+  extraWorkspaces.forEach((workspace) => { workspace.hidden = workspace !== whareWorkspace; });
+  await loadClients(); fillClientSelect(whareClient); updateMauriScore();
+  setMessage(whareMessage, authorisedClients.length ? '' : 'Create a demo client before recording wellbeing.');
+}
+
+async function showReportsWorkspace() {
+  dashboardSections.forEach((section) => { section.hidden = true; });
+  clientsWorkspace.hidden = true; securityWorkspace.hidden = true; followupsWorkspace.hidden = true;
+  extraWorkspaces.forEach((workspace) => { workspace.hidden = workspace !== reportsWorkspace; });
+  await loadClients(); fillClientSelect(reportClient); reportPreview.replaceChildren(); setMessage(reportMessage);
+}
+
+async function showManaakiWorkspace() {
+  dashboardSections.forEach((section) => { section.hidden = true; });
+  clientsWorkspace.hidden = true; securityWorkspace.hidden = true; followupsWorkspace.hidden = true;
+  extraWorkspaces.forEach((workspace) => { workspace.hidden = workspace !== manaakiWorkspace; });
+  await loadClients(); await loadFollowups();
+  const open = followups.filter((item) => item.status === 'scheduled'); const overdue = open.filter((item) => followupBucket(item) === 'overdue');
+  manaakiSummary.replaceChildren();
+  [['Demo clients',authorisedClients.length],['Open follow-ups',open.length],['Overdue',overdue.length]].forEach(([label,count]) => { const card=document.createElement('div'); const strong=document.createElement('strong'); const span=document.createElement('span'); strong.textContent=count; span.textContent=label; card.append(strong,span); manaakiSummary.append(card); });
+  manaakiPriorities.replaceChildren();
+  const priorities=[overdue.length ? `Review ${overdue.length} overdue follow-up${overdue.length===1?'':'s'}.` : 'No overdue follow-ups — ka pai.', open.length ? 'Review today’s scheduled contacts.' : 'Schedule the next appropriate demo follow-up.', 'Complete outstanding case-note drafts and check safety plans.'];
+  priorities.forEach((item) => { const li=document.createElement('li'); li.textContent=item; manaakiPriorities.append(li); });
+}
+
+function updateMauriScore() {
+  const total = pouInputs.reduce((sum,input) => sum + Number(input.value), 0);
+  mauriScore.textContent = `Mauri: ${total} / 20 · ${total * 5}%`;
 }
 
 function followupBucket(item) {
@@ -190,7 +258,10 @@ async function showSecurityWorkspace() {
   dashboardSections.forEach((section) => { section.hidden = true; });
   clientsWorkspace.hidden = true;
   followupsWorkspace.hidden = true;
+  extraWorkspaces.forEach((workspace) => { workspace.hidden = true; });
   securityWorkspace.hidden = false;
+  const { data } = await supabase.from('practitioners').select('display_name').single();
+  profileName.value = data?.display_name ?? '';
   await loadAuditEvents();
 }
 
@@ -255,6 +326,10 @@ async function openClient(client) {
     : 'Not recorded';
   detailStatus.textContent = client.status;
   detailCreatedAt.textContent = new Intl.DateTimeFormat('en-NZ', { dateStyle: 'medium' }).format(new Date(client.created_at));
+  document.querySelector('#detail-consent').textContent = client.consent_status.replace('_', ' ');
+  document.querySelector('#detail-risk').textContent = client.risk_level.replace('_', ' ');
+  document.querySelector('#detail-alert').textContent = client.alert_active ? 'Active' : 'None';
+  clientConsent.value = client.consent_status; clientRisk.value = client.risk_level; clientAlert.checked = client.alert_active; clientSafetyPlan.value = client.safety_plan ?? '';
   clientDetail.hidden = false;
   noteEditor.hidden = true;
   await loadNotes();
@@ -377,7 +452,7 @@ async function loadClients() {
 
   const { data, error } = await supabase
     .from('clients')
-    .select('id, preferred_name, family_name, date_of_birth, status, created_at')
+    .select('id, preferred_name, family_name, date_of_birth, status, consent_status, risk_level, alert_active, safety_plan, created_at')
     .order('preferred_name', { ascending: true });
 
   refreshClientsButton.disabled = false;
@@ -451,6 +526,9 @@ document.querySelectorAll('.module').forEach((button) => {
       await showFollowupsWorkspace();
       return;
     }
+    if (button.dataset.module === 'whare') { await showWhareWorkspace(); return; }
+    if (button.dataset.module === 'reports') { await showReportsWorkspace(); return; }
+    if (button.dataset.module === 'manaaki') { await showManaakiWorkspace(); return; }
     const [title, body] = moduleMessages[button.dataset.module];
     statusPanel.innerHTML = `<p class="eyebrow">Selected room</p><h2>${title}</h2><p>${body}</p>`;
     statusPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -501,6 +579,10 @@ document.querySelectorAll('[data-followup-filter]').forEach((button) => button.a
   document.querySelectorAll('[data-followup-filter]').forEach((item) => item.classList.toggle('active', item === button));
   renderFollowups();
 }));
+document.querySelector('#close-whare').addEventListener('click', showDashboard);
+document.querySelector('#close-reports').addEventListener('click', showDashboard);
+document.querySelector('#close-manaaki').addEventListener('click', showDashboard);
+pouInputs.forEach((input) => input.addEventListener('input', updateMauriScore));
 newNoteButton.addEventListener('click', showNewNote);
 clearNoteButton.addEventListener('click', showNewNote);
 closeNoteEditorButton.addEventListener('click', () => { noteEditor.hidden = true; });
@@ -567,6 +649,44 @@ followupForm.addEventListener('submit', async (event) => {
   setMessage(followupFormMessage, 'Demo follow-up scheduled securely.', 'success');
   await loadFollowups();
 });
+
+safetyForm.addEventListener('submit', async (event) => {
+  event.preventDefault(); if (!selectedClient) return;
+  const updates={consent_status:clientConsent.value,risk_level:clientRisk.value,alert_active:clientAlert.checked,safety_plan:clientSafetyPlan.value.trim()||null,updated_at:new Date().toISOString()};
+  const { error }=await supabase.from('clients').update(updates).eq('id',selectedClient.id);
+  if(error){setMessage(safetyMessage,'Safety details could not be saved.','error');return;}
+  Object.assign(selectedClient,updates); setMessage(safetyMessage,'Demo safety details saved.','success'); await openClient(selectedClient);
+});
+
+whareForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const { data:userData,error:userError }=await supabase.auth.getUser();
+  const values=pouInputs.map((input)=>Number(input.value));
+  const { error }=userError?{error:userError}:await supabase.from('wellbeing_assessments').insert({client_id:whareClient.value,practitioner_id:userData.user.id,taha_tinana:values[0],taha_hinengaro:values[1],taha_whanau:values[2],taha_wairua:values[3],strengths:whareFields[0].value.trim()||null,support_needs:whareFields[1].value.trim()||null,risk_concerns:whareFields[2].value.trim()||null,plan:whareFields[3].value.trim()||null});
+  if(error){setMessage(whareMessage,'The wellbeing snapshot could not be saved.','error');return;}
+  setMessage(whareMessage,'Demo wellbeing snapshot saved securely.','success'); whareFields.forEach((field)=>{field.value='';});
+});
+
+document.querySelector('#generate-report').addEventListener('click', async () => {
+  const client=authorisedClients.find((item)=>item.id===reportClient.value); if(!client){setMessage(reportMessage,'Choose a demo client.','error');return;}
+  const [notesResult,wellbeingResult,appointmentsResult]=await Promise.all([
+    supabase.from('case_notes').select('session_at,note_type,content,status').eq('client_id',client.id).order('session_at',{ascending:false}),
+    supabase.from('wellbeing_assessments').select('assessed_at,taha_tinana,taha_hinengaro,taha_whanau,taha_wairua,strengths,support_needs,risk_concerns,plan').eq('client_id',client.id).order('assessed_at',{ascending:false}).limit(1),
+    supabase.from('appointments').select('scheduled_at,contact_type,status,purpose').eq('client_id',client.id).order('scheduled_at',{ascending:true})
+  ]);
+  if(notesResult.error||wellbeingResult.error||appointmentsResult.error){setMessage(reportMessage,'The report information could not be loaded.','error');return;}
+  reportPreview.replaceChildren();
+  const heading=document.createElement('h2'); heading.textContent=`AWHI Demo Clinical Summary — ${formatClientName(client)}`; reportPreview.append(heading);
+  const overview=document.createElement('p'); overview.textContent=`Consent: ${client.consent_status.replace('_',' ')} · Risk: ${client.risk_level.replace('_',' ')} · Safety alert: ${client.alert_active?'Active':'None'}`; reportPreview.append(overview);
+  const latest=wellbeingResult.data?.[0]; if(latest){const h=document.createElement('h3');h.textContent='Latest Te Whare Tapa Whā snapshot';const p=document.createElement('p');const score=latest.taha_tinana+latest.taha_hinengaro+latest.taha_whanau+latest.taha_wairua;p.textContent=`Mauri ${score}/20 (${score*5}%). Strengths: ${latest.strengths||'Not recorded'}. Support needs: ${latest.support_needs||'Not recorded'}. Risk concerns: ${latest.risk_concerns||'Not recorded'}. Plan: ${latest.plan||'Not recorded'}.`;reportPreview.append(h,p);}
+  const nh=document.createElement('h3');nh.textContent=`Session notes (${notesResult.data.length})`;reportPreview.append(nh);notesResult.data.forEach((note)=>{const p=document.createElement('p');p.textContent=`${new Intl.DateTimeFormat('en-NZ',{dateStyle:'medium'}).format(new Date(note.session_at))} · ${note.note_type} · ${note.status}`;reportPreview.append(p);});
+  const fh=document.createElement('h3');fh.textContent=`Follow-ups (${appointmentsResult.data.length})`;reportPreview.append(fh);appointmentsResult.data.forEach((item)=>{const p=document.createElement('p');p.textContent=`${new Intl.DateTimeFormat('en-NZ',{dateStyle:'medium',timeStyle:'short'}).format(new Date(item.scheduled_at))} · ${item.contact_type.replace('_',' ')} · ${item.status} · ${item.purpose}`;reportPreview.append(p);});
+  setMessage(reportMessage,'Demo summary generated. Review it before printing.','success');
+});
+document.querySelector('#print-report').addEventListener('click',()=>window.print());
+
+profileForm.addEventListener('submit',async(event)=>{event.preventDefault();const {data:user}=await supabase.auth.getUser();const {error}=await supabase.from('practitioners').update({display_name:profileName.value.trim()}).eq('id',user.user.id);setMessage(profileMessage,error?'Profile could not be saved.':'Profile saved.',error?'error':'success');});
+passwordForm.addEventListener('submit',async(event)=>{event.preventDefault();const password=document.querySelector('#new-password').value;const confirm=document.querySelector('#confirm-password').value;if(password!==confirm){setMessage(passwordMessage,'The passwords do not match.','error');return;}const {error}=await supabase.auth.updateUser({password});if(error){setMessage(passwordMessage,'Password could not be updated. You may need to sign in again.','error');return;}passwordForm.reset();setMessage(passwordMessage,'Password updated securely.','success');});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
