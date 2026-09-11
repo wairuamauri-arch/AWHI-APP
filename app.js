@@ -56,11 +56,26 @@ const closeSecurityButton = document.querySelector('#close-security');
 const refreshAuditButton = document.querySelector('#refresh-audit');
 const auditMessage = document.querySelector('#audit-message');
 const auditList = document.querySelector('#audit-list');
+const followupsWorkspace = document.querySelector('#followups-workspace');
+const closeFollowupsButton = document.querySelector('#close-followups');
+const followupSummary = document.querySelector('#followup-summary');
+const followupForm = document.querySelector('#followup-form');
+const followupClient = document.querySelector('#followup-client');
+const followupTime = document.querySelector('#followup-time');
+const followupType = document.querySelector('#followup-type');
+const followupPurpose = document.querySelector('#followup-purpose');
+const saveFollowupButton = document.querySelector('#save-followup');
+const followupFormMessage = document.querySelector('#followup-form-message');
+const followupListMessage = document.querySelector('#followup-list-message');
+const followupList = document.querySelector('#followup-list');
+const refreshFollowupsButton = document.querySelector('#refresh-followups');
 
 let authorisedClients = [];
 let selectedClient = null;
 let selectedNoteId = null;
 let savedNotes = [];
+let followups = [];
+let followupFilter = 'open';
 
 const noteTemplates = {
   DARP: ['Data', 'Assessment', 'Response', 'Plan'],
@@ -90,12 +105,82 @@ function showDashboard() {
   dashboardSections.forEach((section) => { section.hidden = false; });
   clientsWorkspace.hidden = true;
   securityWorkspace.hidden = true;
+  followupsWorkspace.hidden = true;
   clientDetail.hidden = true;
   noteEditor.hidden = true;
 }
 
+async function showFollowupsWorkspace() {
+  dashboardSections.forEach((section) => { section.hidden = true; });
+  clientsWorkspace.hidden = true;
+  securityWorkspace.hidden = true;
+  followupsWorkspace.hidden = false;
+  await loadClients();
+  followupClient.replaceChildren();
+  authorisedClients.forEach((client) => {
+    const option = document.createElement('option');
+    option.value = client.id;
+    option.textContent = formatClientName(client);
+    followupClient.append(option);
+  });
+  followupTime.value = localDateTimeValue();
+  saveFollowupButton.disabled = authorisedClients.length === 0;
+  setMessage(followupFormMessage, authorisedClients.length ? '' : 'Create a demo client before scheduling a follow-up.');
+  await loadFollowups();
+}
+
+function followupBucket(item) {
+  if (item.status !== 'scheduled') return item.status;
+  const now = new Date();
+  const due = new Date(item.scheduled_at);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  if (due < now) return 'overdue';
+  if (due < tomorrow) return 'today';
+  return 'upcoming';
+}
+
+function renderFollowups() {
+  const counts = { overdue: 0, today: 0, upcoming: 0 };
+  followups.forEach((item) => { const bucket = followupBucket(item); if (bucket in counts) counts[bucket] += 1; });
+  followupSummary.replaceChildren();
+  [['Overdue', counts.overdue], ['Due today', counts.today], ['Upcoming', counts.upcoming]].forEach(([label, count]) => {
+    const card = document.createElement('div'); const number = document.createElement('strong'); const text = document.createElement('span');
+    number.textContent = count; text.textContent = label; card.append(number, text); followupSummary.append(card);
+  });
+  const visible = followupFilter === 'open' ? followups.filter((item) => item.status === 'scheduled') : followups;
+  followupList.replaceChildren();
+  setMessage(followupListMessage, visible.length ? `${visible.length} ${followupFilter === 'open' ? 'open' : 'total'} follow-up${visible.length === 1 ? '' : 's'}.` : 'No follow-ups in this view.');
+  visible.forEach((item) => {
+    const row = document.createElement('article'); row.className = 'followup-row';
+    const badge = document.createElement('span'); badge.className = `due-badge ${followupBucket(item)}`; badge.textContent = followupBucket(item).replace('_', ' ');
+    const detail = document.createElement('div'); const name = document.createElement('strong'); const meta = document.createElement('small');
+    name.textContent = formatClientName(item.clients); meta.textContent = `${new Intl.DateTimeFormat('en-NZ', { dateStyle:'medium', timeStyle:'short' }).format(new Date(item.scheduled_at))} · ${item.contact_type.replace('_', ' ')} · ${item.purpose}`;
+    detail.append(name, meta); row.append(badge, detail);
+    if (item.status === 'scheduled') { const done = document.createElement('button'); done.type = 'button'; done.className = 'secondary-button'; done.textContent = 'Complete'; done.addEventListener('click', () => completeFollowup(item.id)); row.append(done); }
+    followupList.append(row);
+  });
+}
+
+async function loadFollowups() {
+  setMessage(followupListMessage, 'Loading your secure schedule…');
+  refreshFollowupsButton.disabled = true;
+  const { data, error } = await supabase.from('appointments').select('id, scheduled_at, contact_type, purpose, status, clients(preferred_name, family_name)').order('scheduled_at', { ascending: true });
+  refreshFollowupsButton.disabled = false;
+  if (error) { setMessage(followupListMessage, 'AWHI could not load follow-ups.', 'error'); return; }
+  followups = data ?? []; renderFollowups();
+}
+
+async function completeFollowup(id) {
+  const { error } = await supabase.from('appointments').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { setMessage(followupListMessage, 'The follow-up could not be completed.', 'error'); return; }
+  await loadFollowups();
+}
+
 async function showClientsWorkspace() {
   dashboardSections.forEach((section) => { section.hidden = true; });
+  followupsWorkspace.hidden = true;
+  securityWorkspace.hidden = true;
   clientsWorkspace.hidden = false;
   clientsWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
   await loadClients();
@@ -104,6 +189,7 @@ async function showClientsWorkspace() {
 async function showSecurityWorkspace() {
   dashboardSections.forEach((section) => { section.hidden = true; });
   clientsWorkspace.hidden = true;
+  followupsWorkspace.hidden = true;
   securityWorkspace.hidden = false;
   await loadAuditEvents();
 }
@@ -121,10 +207,10 @@ async function loadAuditEvents() {
   setMessage(auditMessage, `${data.length} recent event${data.length === 1 ? '' : 's'}.`);
   data.forEach((event) => {
     const row = document.createElement('div'); row.className = 'audit-row';
-    const icon = document.createElement('span'); icon.className = 'audit-icon'; icon.textContent = event.entity_type === 'client' ? 'C' : 'N';
+    const icon = document.createElement('span'); icon.className = 'audit-icon'; icon.textContent = ({ client: 'C', case_note: 'N', appointment: 'F' })[event.entity_type] ?? 'A';
     const detail = document.createElement('div');
     const title = document.createElement('strong'); title.textContent = event.action.split('.').map((part) => part[0].toUpperCase() + part.slice(1)).join(' ');
-    const meta = document.createElement('small'); meta.textContent = [event.metadata?.note_type, event.metadata?.status].filter(Boolean).join(' · ') || 'No clinical content stored';
+    const meta = document.createElement('small'); meta.textContent = [event.metadata?.note_type, event.metadata?.contact_type?.replace('_', ' '), event.metadata?.status].filter(Boolean).join(' · ') || 'No clinical content stored';
     detail.append(title, meta);
     const time = document.createElement('time'); time.textContent = new Intl.DateTimeFormat('en-NZ', { dateStyle:'medium', timeStyle:'short' }).format(new Date(event.occurred_at));
     row.append(icon, detail, time); auditList.append(row);
@@ -361,6 +447,10 @@ document.querySelectorAll('.module').forEach((button) => {
       await showSecurityWorkspace();
       return;
     }
+    if (button.dataset.module === 'followups') {
+      await showFollowupsWorkspace();
+      return;
+    }
     const [title, body] = moduleMessages[button.dataset.module];
     statusPanel.innerHTML = `<p class="eyebrow">Selected room</p><h2>${title}</h2><p>${body}</p>`;
     statusPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -404,6 +494,13 @@ refreshClientsButton.addEventListener('click', loadClients);
 closeClientsButton.addEventListener('click', showDashboard);
 closeSecurityButton.addEventListener('click', showDashboard);
 refreshAuditButton.addEventListener('click', loadAuditEvents);
+closeFollowupsButton.addEventListener('click', showDashboard);
+refreshFollowupsButton.addEventListener('click', loadFollowups);
+document.querySelectorAll('[data-followup-filter]').forEach((button) => button.addEventListener('click', () => {
+  followupFilter = button.dataset.followupFilter;
+  document.querySelectorAll('[data-followup-filter]').forEach((item) => item.classList.toggle('active', item === button));
+  renderFollowups();
+}));
 newNoteButton.addEventListener('click', showNewNote);
 clearNoteButton.addEventListener('click', showNewNote);
 closeNoteEditorButton.addEventListener('click', () => { noteEditor.hidden = true; });
@@ -450,6 +547,25 @@ noteForm.addEventListener('submit', async (event) => {
   await loadNotes();
   const savedNote = savedNotes.find((note) => note.id === selectedNoteId);
   if (savedNote) openNote(savedNote);
+});
+
+followupForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  saveFollowupButton.disabled = true;
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const { error } = userError ? { error: userError } : await supabase.from('appointments').insert({
+    client_id: followupClient.value,
+    practitioner_id: userData.user.id,
+    scheduled_at: new Date(followupTime.value).toISOString(),
+    contact_type: followupType.value,
+    purpose: followupPurpose.value.trim(),
+    status: 'scheduled'
+  });
+  saveFollowupButton.disabled = false;
+  if (error) { setMessage(followupFormMessage, 'The follow-up could not be scheduled.', 'error'); return; }
+  followupPurpose.value = 'Follow-up'; followupTime.value = localDateTimeValue();
+  setMessage(followupFormMessage, 'Demo follow-up scheduled securely.', 'success');
+  await loadFollowups();
 });
 
 if ('serviceWorker' in navigator) {

@@ -68,10 +68,11 @@
       <section class="grid" aria-label="AWHI modules">
         <button class="module" data-module="clients"><span>01</span><h3>Clients</h3><p>Search, create and open authorised client records.</p></button>
         <button class="module" data-module="notes"><span>02</span><h3>Session Notes</h3><p>Create structured DARP and SOAP notes.</p></button>
-        <button class="module" data-module="whare"><span>03</span><h3>Te Whare Tapa Whā</h3><p>Reserved for the interactive wellbeing space.</p></button>
-        <button class="module" data-module="reports"><span>04</span><h3>Reports</h3><p>Reserved for future clinical reporting tools.</p></button>
-        <button class="module" data-module="manaaki"><span>05</span><h3>Manaaki</h3><p>AI assistance comes after the secure clinical core.</p></button>
-        <button class="module" data-module="settings"><span>06</span><h3>Settings</h3><p>Practitioner profile, security and app preferences.</p></button>
+        <button class="module" data-module="followups"><span>03</span><h3>Follow-ups</h3><p>Schedule and track your authorised demo client contacts.</p></button>
+        <button class="module" data-module="whare"><span>04</span><h3>Te Whare Tapa Whā</h3><p>Reserved for the interactive wellbeing space.</p></button>
+        <button class="module" data-module="reports"><span>05</span><h3>Reports</h3><p>Reserved for future clinical reporting tools.</p></button>
+        <button class="module" data-module="manaaki"><span>06</span><h3>Manaaki</h3><p>AI assistance comes after the secure clinical core.</p></button>
+        <button class="module" data-module="settings"><span>07</span><h3>Settings</h3><p>Practitioner profile, security and app preferences.</p></button>
       </section>
 
       <section id="status" class="status-panel" aria-live="polite">
@@ -190,6 +191,35 @@
             <p id="note-form-message" class="form-message" role="status" aria-live="polite"></p>
           </form>
         </section>
+      </section>
+
+      <section id="followups-workspace" class="workspace" hidden aria-labelledby="followups-title">
+        <div class="workspace-heading">
+          <div><p class="eyebrow">Secure demo scheduling</p><h2 id="followups-title">Appointments & Follow-ups</h2><p>Plan your next client contacts and keep overdue mahi visible.</p></div>
+          <button id="close-followups" class="secondary-button" type="button">Back to dashboard</button>
+        </div>
+        <div id="followup-summary" class="followup-summary" aria-label="Follow-up summary"></div>
+        <div class="client-layout">
+          <form id="followup-form" class="panel-card">
+            <p class="eyebrow">New demo follow-up</p><h3>Schedule contact</h3>
+            <label for="followup-client">Demo client</label>
+            <select id="followup-client" required></select>
+            <label for="followup-time">Date and time</label>
+            <input id="followup-time" type="datetime-local" required />
+            <label for="followup-type">Contact type</label>
+            <select id="followup-type"><option value="in_person">In person</option><option value="phone">Phone</option><option value="video">Video</option><option value="home_visit">Home visit</option><option value="other">Other</option></select>
+            <label for="followup-purpose">Purpose</label>
+            <input id="followup-purpose" maxlength="160" value="Follow-up" required />
+            <button id="save-followup" class="primary-button" type="submit">Schedule securely</button>
+            <p id="followup-form-message" class="form-message" role="status" aria-live="polite"></p>
+          </form>
+          <section class="panel-card">
+            <div class="client-browser-heading"><div><p class="eyebrow">Your schedule</p><h3>Upcoming mahi</h3></div><button id="refresh-followups" class="secondary-button" type="button">Refresh</button></div>
+            <div class="followup-filters" role="group" aria-label="Filter follow-ups"><button class="filter-button active" data-followup-filter="open" type="button">Open</button><button class="filter-button" data-followup-filter="all" type="button">All</button></div>
+            <p id="followup-list-message" class="form-message" role="status" aria-live="polite"></p>
+            <div id="followup-list" class="followup-list"></div>
+          </section>
+        </div>
       </section>
 
       <section id="security-workspace" class="workspace" hidden aria-labelledby="security-title">

@@ -143,3 +143,4 @@ with check (practitioner_id = auth.uid());
 -- supabase/migrations/20260910090000_secure_demo_clients.sql
 -- supabase/migrations/20260910200000_secure_demo_case_notes.sql
 -- supabase/migrations/20260910203000_security_audit_events.sql
+-- supabase/migrations/20260911090000_secure_follow_ups.sql
