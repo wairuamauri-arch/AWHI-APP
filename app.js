@@ -15,6 +15,14 @@ const authView = document.querySelector('#auth-view');
 const appView = document.querySelector('#app-view');
 const loginForm = document.querySelector('#login-form');
 const loginButton = document.querySelector('#login-button');
+const forgotPasswordButton = document.querySelector('#forgot-password-button');
+const recoveryForm = document.querySelector('#recovery-form');
+const recoveryTitle = document.querySelector('#recovery-title');
+const recoveryRequestFields = document.querySelector('#recovery-request-fields');
+const recoveryPasswordFields = document.querySelector('#recovery-password-fields');
+const recoverySubmitButton = document.querySelector('#recovery-submit-button');
+const recoveryCancelButton = document.querySelector('#recovery-cancel-button');
+const recoveryMessage = document.querySelector('#recovery-message');
 const logoutButton = document.querySelector('#logout-button');
 const authMessage = document.querySelector('#auth-message');
 const signedInUser = document.querySelector('#signed-in-user');
@@ -105,6 +113,7 @@ let selectedNoteId = null;
 let savedNotes = [];
 let followups = [];
 let followupFilter = 'open';
+let passwordRecoveryMode = false;
 
 const noteTemplates = {
   DARP: ['Data', 'Assessment', 'Response', 'Plan'],
@@ -113,8 +122,8 @@ const noteTemplates = {
 
 function renderSession(session) {
   const signedIn = Boolean(session?.user);
-  authView.hidden = signedIn;
-  appView.hidden = !signedIn;
+  authView.hidden = signedIn && !passwordRecoveryMode;
+  appView.hidden = !signedIn || passwordRecoveryMode;
   signedInUser.textContent = signedIn ? session.user.email ?? 'Practitioner' : '';
   if (!signedIn) loginForm.reset();
   if (signedIn) loadDashboardSummary();
@@ -124,6 +133,30 @@ function renderSession(session) {
     savedNotes = [];
     showDashboard();
   }
+}
+
+function showRecoveryForm(isPasswordUpdate = false) {
+  passwordRecoveryMode = isPasswordUpdate;
+  loginForm.hidden = true;
+  recoveryForm.hidden = false;
+  recoveryRequestFields.hidden = isPasswordUpdate;
+  recoveryPasswordFields.hidden = !isPasswordUpdate;
+  document.querySelector('#recovery-email').disabled = isPasswordUpdate;
+  document.querySelector('#recovery-password').disabled = !isPasswordUpdate;
+  document.querySelector('#recovery-password-confirm').disabled = !isPasswordUpdate;
+  recoveryTitle.textContent = isPasswordUpdate ? 'Choose a new password' : 'Reset password';
+  recoverySubmitButton.textContent = isPasswordUpdate ? 'Update password securely' : 'Send secure reset link';
+  recoveryMessage.textContent = '';
+  authView.hidden = false;
+  appView.hidden = true;
+}
+
+function showLoginForm() {
+  passwordRecoveryMode = false;
+  recoveryForm.reset();
+  recoveryForm.hidden = true;
+  loginForm.hidden = false;
+  recoveryMessage.textContent = '';
 }
 
 async function loadDashboardSummary() {
@@ -518,6 +551,56 @@ loginForm.addEventListener('submit', async (event) => {
   loginButton.textContent = 'Sign in securely';
 });
 
+forgotPasswordButton.addEventListener('click', () => {
+  document.querySelector('#recovery-email').value = document.querySelector('#email').value.trim();
+  showRecoveryForm(false);
+});
+
+recoveryCancelButton.addEventListener('click', async () => {
+  if (passwordRecoveryMode) await supabase.auth.signOut();
+  showLoginForm();
+  renderSession(null);
+});
+
+recoveryForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  recoverySubmitButton.disabled = true;
+  recoveryMessage.textContent = '';
+
+  if (!passwordRecoveryMode) {
+    const email = document.querySelector('#recovery-email').value.trim();
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      recoveryMessage.textContent = 'AWHI could not send a reset link right now. Wait a moment and try again.';
+      recoverySubmitButton.disabled = false;
+      return;
+    }
+    recoveryMessage.textContent = 'If that email belongs to an AWHI practitioner, a reset link has been sent. Check the inbox and spam folder.';
+    recoverySubmitButton.disabled = false;
+    return;
+  }
+
+  const password = document.querySelector('#recovery-password').value;
+  const confirmation = document.querySelector('#recovery-password-confirm').value;
+  if (password !== confirmation) {
+    recoveryMessage.textContent = 'The passwords do not match.';
+    recoverySubmitButton.disabled = false;
+    return;
+  }
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    recoveryMessage.textContent = 'The password could not be updated. Request a new reset link and try again.';
+    recoverySubmitButton.disabled = false;
+    return;
+  }
+  await supabase.auth.signOut();
+  showLoginForm();
+  renderSession(null);
+  authMessage.textContent = 'Password updated. Sign in with your new password.';
+  recoverySubmitButton.disabled = false;
+});
+
 logoutButton.addEventListener('click', async () => {
   logoutButton.disabled = true;
   const { error } = await supabase.auth.signOut();
@@ -527,7 +610,11 @@ logoutButton.addEventListener('click', async () => {
   logoutButton.disabled = false;
 });
 
-supabase.auth.onAuthStateChange((_event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    showRecoveryForm(true);
+    return;
+  }
   renderSession(session);
 });
 

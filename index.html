@@ -27,8 +27,28 @@
         <input id="password" name="password" type="password" autocomplete="current-password" required />
 
         <button id="login-button" class="primary-button" type="submit">Sign in securely</button>
+        <button id="forgot-password-button" class="text-button" type="button">Forgot your password?</button>
         <p id="auth-message" class="auth-message" role="status" aria-live="polite"></p>
         <p class="small-print">AWHI does not offer public account registration. Practitioner accounts are provisioned separately.</p>
+      </form>
+
+      <form id="recovery-form" class="login-card" hidden>
+        <p class="eyebrow">Account recovery</p>
+        <h2 id="recovery-title">Reset password</h2>
+        <div id="recovery-request-fields">
+          <label for="recovery-email">Practitioner email</label>
+          <input id="recovery-email" name="email" type="email" autocomplete="email" required />
+        </div>
+        <div id="recovery-password-fields" hidden>
+          <label for="recovery-password">New password</label>
+          <input id="recovery-password" type="password" minlength="12" autocomplete="new-password" required />
+          <label for="recovery-password-confirm">Confirm new password</label>
+          <input id="recovery-password-confirm" type="password" minlength="12" autocomplete="new-password" required />
+        </div>
+        <button id="recovery-submit-button" class="primary-button" type="submit">Send secure reset link</button>
+        <button id="recovery-cancel-button" class="text-button" type="button">Back to sign in</button>
+        <p id="recovery-message" class="auth-message" role="status" aria-live="polite"></p>
+        <p class="small-print">For privacy, AWHI gives the same response whether or not an account exists.</p>
       </form>
     </div>
   </section>
