@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>AWHI Recovery Sign-in Test</title>
+<style>body{font:18px system-ui;background:#f5f3ed;color:#193f39;margin:0;padding:24px}main{max-width:520px;margin:24px auto;background:white;padding:24px;border-radius:16px}label,input,button{display:block;box-sizing:border-box;width:100%;margin:12px 0}input,button{padding:14px;font:inherit}button{background:#285f58;color:white;border:0;border-radius:8px}button:disabled{opacity:.6}[hidden]{display:none!important}#status{white-space:pre-line;line-height:1.6}.badge{background:#fff0cf;padding:12px;border-radius:8px}</style></head>
+<body><main><p class="badge">AWHI RECOVERY TEST · Demo only</p><h1>Test your restored sign-in</h1>
+<p>This page connects only to the recovery copy. It checks access and shows record counts, without displaying clinical content.</p>
+<form id="login"><label for="email">Practitioner email</label><input id="email" type="email" autocomplete="username" required><label for="password">Practitioner password</label><input id="password" type="password" autocomplete="current-password" required><button id="signin" disabled>Sign in to recovery copy</button></form>
+<form id="mfa" hidden><label for="code">Authenticator code for this recovery account</label><input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><button id="verify">Verify code</button></form>
+<p id="status" role="status" aria-live="polite">Loading secure sign-in…</p><button id="signout" hidden>Sign out of test</button>
+<p>The restored password may be older than your current AWHI password. Use your practitioner password, not the new database password. Never send passwords or codes in chat.</p>
+<p>Closing or refreshing this page clears its local sign-in state.</p></main><script type="module" src="./signin.js"></script></body></html>
