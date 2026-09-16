@@ -16,16 +16,17 @@ function clearSetup() {
 async function run(action) {
   if (busy) return;
   busy = true;
-  ['signin','verify','signout','enrol','confirm','cancel-setup'].forEach(id => el(id).disabled = true);
+  ['signin','verify','signout','enrol','confirm','cancel-setup','retry'].forEach(id => el(id).disabled = true);
   try { await action(); }
   catch { el('status').textContent = 'The test could not finish. Sign out and try again.'; }
-  finally { busy = false; ['signin','verify','signout','enrol','confirm','cancel-setup'].forEach(id => el(id).disabled = false); }
+  finally { busy = false; ['signin','verify','signout','enrol','confirm','cancel-setup','retry'].forEach(id => el(id).disabled = false); }
 }
 async function checkAccess() {
   el('enrol').hidden = true;
   const { data, error } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
   if (error || !data?.currentLevel) throw new Error('Assurance unavailable');
   el('signout').hidden = false;
+  el('retry').hidden = false;
   el('login').hidden = true;
   if (data.nextLevel === 'aal2' && data.currentLevel !== 'aal2') {
     const factors = await client.auth.mfa.listFactors();
@@ -37,9 +38,19 @@ async function checkAccess() {
   }
   el('mfa').hidden = true;
   const tables = ['practitioners','clients','case_notes','appointments'];
-  const results = await Promise.all(tables.map(table => client.from(table).select('id', { count: 'exact', head: true })));
-  if (results.some(result => result.error) || results[0].count !== 1) {
-    el('status').textContent = 'Sign-in accepted, but restored-record access did not pass. Tell Manaaki this message.';
+  const results = await Promise.all(tables.map(table => client.from(table).select('id', { count: 'exact' }).limit(0)));
+  if (results.some(result => result.error || !Number.isInteger(result.count)) || results[0].count !== 1) {
+    const labels = ['Profile', 'Clients', 'Notes', 'Appointments'];
+    const details = results.map((result, index) => {
+      const code = String(result.error?.code ?? '');
+      const safeCode = /^[A-Z0-9_]{1,32}$/.test(code) ? code : 'UNAVAILABLE';
+      const status = Number.isInteger(result.status) ? result.status : 'unknown';
+      return labels[index] + ': ' + (result.error
+        ? 'request failed (HTTP ' + status + ', code ' + safeCode + ')'
+        : 'count ' + (Number.isInteger(result.count) ? result.count : 'unavailable'));
+    });
+    el('status').textContent = 'Sign-in accepted; record check needs attention.\nSession: ' + data.currentLevel +
+      '\n' + details.join('\n') + '\nTap Retry record check. If it still fails, share this message.';
     return;
   }
   el('enrol').hidden = data.nextLevel === 'aal2';
@@ -77,6 +88,7 @@ el('signout').addEventListener('click', () => run(async () => {
   factorId = null;
   clearSetup();
   el('enrol').hidden = true;
+  el('retry').hidden = true;
   el('login').reset(); el('mfa').reset();
   el('login').hidden = false; el('mfa').hidden = true; el('signout').hidden = true;
   el('status').textContent = 'Signed out of the recovery test.';
@@ -120,5 +132,10 @@ el('cancel-setup').addEventListener('click', () => run(async () => {
     if (error) { el('status').textContent = 'Setup could not be cancelled. Retry, or sign out.'; return; }
   }
   clearSetup();
+  await checkAccess();
+}));
+
+el('retry').addEventListener('click', () => run(async () => {
+  el('status').textContent = 'Checking restored-record access…';
   await checkAccess();
 }));
