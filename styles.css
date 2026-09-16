@@ -21,6 +21,9 @@ textarea { min-height:145px; resize:vertical; line-height:1.5; }
 .secondary-button { padding:9px 13px; background:var(--green-soft); color:var(--green); }
 .text-button { border:0; padding:8px; background:transparent; color:var(--green); cursor:pointer; font-weight:750; text-decoration:underline; text-underline-offset:3px; }
 .text-button:disabled { opacity:.6; cursor:wait; }
+.mfa-enrolment { display:grid; gap:10px; margin-top:16px; }
+.mfa-enrolment img { width:min(220px,100%); padding:10px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.mfa-enrolment code { overflow-wrap:anywhere; user-select:all; }
 .auth-message { min-height:1.4em; margin:4px 0 0; color:#8b3d32; font-size:.86rem; }
 .small-print { color:var(--muted); font-size:.78rem; line-height:1.5; margin:6px 0 0; }
 .topbar,main,footer { max-width:1180px; margin:0 auto; }

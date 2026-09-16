@@ -23,6 +23,11 @@ const recoveryPasswordFields = document.querySelector('#recovery-password-fields
 const recoverySubmitButton = document.querySelector('#recovery-submit-button');
 const recoveryCancelButton = document.querySelector('#recovery-cancel-button');
 const recoveryMessage = document.querySelector('#recovery-message');
+const mfaChallengeForm = document.querySelector('#mfa-challenge-form');
+const mfaChallengeCode = document.querySelector('#mfa-challenge-code');
+const mfaChallengeButton = document.querySelector('#mfa-challenge-button');
+const mfaChallengeMessage = document.querySelector('#mfa-challenge-message');
+const mfaSignoutButton = document.querySelector('#mfa-signout-button');
 const logoutButton = document.querySelector('#logout-button');
 const authMessage = document.querySelector('#auth-message');
 const signedInUser = document.querySelector('#signed-in-user');
@@ -103,6 +108,16 @@ const profileName = document.querySelector('#profile-name');
 const profileMessage = document.querySelector('#profile-message');
 const passwordForm = document.querySelector('#password-form');
 const passwordMessage = document.querySelector('#password-message');
+const mfaStatus = document.querySelector('#mfa-status');
+const mfaEnrolButton = document.querySelector('#mfa-enrol-button');
+const mfaRemoveButton = document.querySelector('#mfa-remove-button');
+const mfaEnrolment = document.querySelector('#mfa-enrolment');
+const mfaQrCode = document.querySelector('#mfa-qr-code');
+const mfaSecret = document.querySelector('#mfa-secret');
+const mfaEnrolCode = document.querySelector('#mfa-enrol-code');
+const mfaConfirmButton = document.querySelector('#mfa-confirm-button');
+const mfaCancelButton = document.querySelector('#mfa-cancel-button');
+const mfaSettingsMessage = document.querySelector('#mfa-settings-message');
 const toggleClientStatusButton = document.querySelector('#toggle-client-status');
 const reminderBanner = document.querySelector('#reminder-banner');
 const exportMessage = document.querySelector('#export-message');
@@ -114,6 +129,8 @@ let savedNotes = [];
 let followups = [];
 let followupFilter = 'open';
 let passwordRecoveryMode = false;
+let mfaChallengeFactorId = null;
+let pendingMfaFactorId = null;
 
 const noteTemplates = {
   DARP: ['Data', 'Assessment', 'Response', 'Plan'],
@@ -133,6 +150,44 @@ function renderSession(session) {
     savedNotes = [];
     showDashboard();
   }
+}
+
+async function checkMfaAndRender(session) {
+  if (!session?.user || passwordRecoveryMode) {
+    renderSession(session);
+    return;
+  }
+  const { data: assurance, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (error) {
+    await supabase.auth.signOut();
+    showLoginForm();
+    authMessage.textContent = 'AWHI could not verify the security level of this session. Please sign in again.';
+    renderSession(null);
+    return;
+  }
+  if (assurance.nextLevel === 'aal2' && assurance.currentLevel !== 'aal2') {
+    const { data: factors, error: factorError } = await supabase.auth.mfa.listFactors();
+    const factor = factors?.totp?.find((item) => item.status === 'verified');
+    if (factorError || !factor) {
+      await supabase.auth.signOut();
+      showLoginForm();
+      authMessage.textContent = 'Your authenticator could not be loaded. Contact the AWHI administrator.';
+      renderSession(null);
+      return;
+    }
+    mfaChallengeFactorId = factor.id;
+    loginForm.hidden = true;
+    recoveryForm.hidden = true;
+    mfaChallengeForm.hidden = false;
+    authView.hidden = false;
+    appView.hidden = true;
+    mfaChallengeCode.value = '';
+    mfaChallengeMessage.textContent = '';
+    mfaChallengeCode.focus();
+    return;
+  }
+  mfaChallengeForm.hidden = true;
+  renderSession(session);
 }
 
 function showRecoveryForm(isPasswordUpdate = false) {
@@ -155,6 +210,7 @@ function showLoginForm() {
   passwordRecoveryMode = false;
   recoveryForm.reset();
   recoveryForm.hidden = true;
+  mfaChallengeForm.hidden = true;
   loginForm.hidden = false;
   recoveryMessage.textContent = '';
 }
@@ -325,7 +381,21 @@ async function showSecurityWorkspace() {
   securityWorkspace.hidden = false;
   const { data } = await supabase.from('practitioners').select('display_name').single();
   profileName.value = data?.display_name ?? '';
+  await loadMfaStatus();
   await loadAuditEvents();
+}
+
+async function loadMfaStatus() {
+  const { data, error } = await supabase.auth.mfa.listFactors();
+  const verified = data?.totp?.find((factor) => factor.status === 'verified');
+  if (error) {
+    setMessage(mfaStatus, 'Two-step verification status could not be loaded.', 'error');
+    return;
+  }
+  mfaStatus.textContent = verified ? 'Enabled — AWHI will require an authenticator code at sign-in.' : 'Not enabled — add an authenticator for stronger account protection.';
+  mfaEnrolButton.hidden = Boolean(verified);
+  mfaRemoveButton.hidden = !verified;
+  mfaRemoveButton.dataset.factorId = verified?.id ?? '';
 }
 
 async function loadAuditEvents() {
@@ -544,11 +614,35 @@ loginForm.addEventListener('submit', async (event) => {
   if (error) {
     authMessage.textContent = 'Sign in was not successful. Check your email and password.';
   } else {
-    renderSession(data.session);
+    await checkMfaAndRender(data.session);
   }
 
   loginButton.disabled = false;
   loginButton.textContent = 'Sign in securely';
+});
+
+mfaChallengeForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  mfaChallengeButton.disabled = true;
+  mfaChallengeMessage.textContent = '';
+  const code = mfaChallengeCode.value.trim();
+  const { data, error } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfaChallengeFactorId, code });
+  if (error) {
+    mfaChallengeMessage.textContent = 'That code was not accepted. Wait for a new code and try again.';
+    mfaChallengeButton.disabled = false;
+    return;
+  }
+  mfaChallengeFactorId = null;
+  mfaChallengeForm.hidden = true;
+  mfaChallengeButton.disabled = false;
+  renderSession(data.session);
+});
+
+mfaSignoutButton.addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  mfaChallengeFactorId = null;
+  showLoginForm();
+  renderSession(null);
 });
 
 forgotPasswordButton.addEventListener('click', () => {
@@ -615,11 +709,11 @@ supabase.auth.onAuthStateChange((event, session) => {
     showRecoveryForm(true);
     return;
   }
-  renderSession(session);
+  window.setTimeout(() => checkMfaAndRender(session), 0);
 });
 
 const { data: initialSession } = await supabase.auth.getSession();
-renderSession(initialSession.session);
+await checkMfaAndRender(initialSession.session);
 
 const moduleMessages = {
   clients: ['Clients', 'Phase One will connect secure client search, creation and authorised access here.'],
@@ -821,6 +915,69 @@ document.querySelector('#print-report').addEventListener('click',()=>window.prin
 
 profileForm.addEventListener('submit',async(event)=>{event.preventDefault();const {data:user}=await supabase.auth.getUser();const {error}=await supabase.from('practitioners').update({display_name:profileName.value.trim()}).eq('id',user.user.id);setMessage(profileMessage,error?'Profile could not be saved.':'Profile saved.',error?'error':'success');});
 passwordForm.addEventListener('submit',async(event)=>{event.preventDefault();const password=document.querySelector('#new-password').value;const confirm=document.querySelector('#confirm-password').value;if(password!==confirm){setMessage(passwordMessage,'The passwords do not match.','error');return;}const {error}=await supabase.auth.updateUser({password});if(error){setMessage(passwordMessage,'Password could not be updated. You may need to sign in again.','error');return;}passwordForm.reset();setMessage(passwordMessage,'Password updated securely.','success');});
+
+mfaEnrolButton.addEventListener('click', async () => {
+  mfaEnrolButton.disabled = true;
+  setMessage(mfaSettingsMessage, 'Preparing your authenticator…');
+  const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'AWHI Digital Clinic' });
+  mfaEnrolButton.disabled = false;
+  if (error) {
+    setMessage(mfaSettingsMessage, 'Authenticator setup could not be started.', 'error');
+    return;
+  }
+  pendingMfaFactorId = data.id;
+  mfaQrCode.src = data.totp.qr_code;
+  mfaSecret.textContent = data.totp.secret;
+  mfaEnrolment.hidden = false;
+  mfaEnrolButton.hidden = true;
+  mfaEnrolCode.value = '';
+  setMessage(mfaSettingsMessage, 'Scan the QR code, then enter the current six-digit code.');
+});
+
+mfaConfirmButton.addEventListener('click', async () => {
+  const code = mfaEnrolCode.value.trim();
+  if (!/^[0-9]{6}$/.test(code)) {
+    setMessage(mfaSettingsMessage, 'Enter the six-digit code from your authenticator app.', 'error');
+    return;
+  }
+  mfaConfirmButton.disabled = true;
+  const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: pendingMfaFactorId, code });
+  mfaConfirmButton.disabled = false;
+  if (error) {
+    setMessage(mfaSettingsMessage, 'That code was not accepted. Wait for a new code and try again.', 'error');
+    return;
+  }
+  pendingMfaFactorId = null;
+  mfaEnrolment.hidden = true;
+  mfaQrCode.removeAttribute('src');
+  mfaSecret.textContent = '';
+  setMessage(mfaSettingsMessage, 'Two-step verification is now enabled.', 'success');
+  await loadMfaStatus();
+});
+
+mfaCancelButton.addEventListener('click', async () => {
+  if (pendingMfaFactorId) await supabase.auth.mfa.unenroll({ factorId: pendingMfaFactorId });
+  pendingMfaFactorId = null;
+  mfaEnrolment.hidden = true;
+  mfaQrCode.removeAttribute('src');
+  mfaSecret.textContent = '';
+  mfaEnrolButton.hidden = false;
+  setMessage(mfaSettingsMessage);
+});
+
+mfaRemoveButton.addEventListener('click', async () => {
+  if (!window.confirm('Remove two-step verification from this practitioner account?')) return;
+  mfaRemoveButton.disabled = true;
+  const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaRemoveButton.dataset.factorId });
+  mfaRemoveButton.disabled = false;
+  if (error) {
+    setMessage(mfaSettingsMessage, 'The authenticator could not be removed. Sign in again and retry.', 'error');
+    return;
+  }
+  await supabase.auth.refreshSession();
+  setMessage(mfaSettingsMessage, 'Two-step verification was removed.', 'success');
+  await loadMfaStatus();
+});
 
 document.querySelector('#export-demo-data').addEventListener('click',async()=>{
   setMessage(exportMessage,'Preparing your authorised demo records…');

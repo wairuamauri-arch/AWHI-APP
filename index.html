@@ -50,6 +50,17 @@
         <p id="recovery-message" class="auth-message" role="status" aria-live="polite"></p>
         <p class="small-print">For privacy, AWHI gives the same response whether or not an account exists.</p>
       </form>
+
+      <form id="mfa-challenge-form" class="login-card" hidden>
+        <p class="eyebrow">Two-step verification</p>
+        <h2>Enter your security code</h2>
+        <p>Open your authenticator app and enter the current six-digit code.</p>
+        <label for="mfa-challenge-code">Authenticator code</label>
+        <input id="mfa-challenge-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required />
+        <button id="mfa-challenge-button" class="primary-button" type="submit">Verify and open AWHI</button>
+        <button id="mfa-signout-button" class="text-button" type="button">Cancel and sign out</button>
+        <p id="mfa-challenge-message" class="auth-message" role="status" aria-live="polite"></p>
+      </form>
     </div>
   </section>
 
@@ -306,6 +317,22 @@
         <div class="settings-grid">
           <form id="profile-form" class="panel-card"><h3>Practitioner profile</h3><label>Display name<input id="profile-name" maxlength="120" required /></label><button class="primary-button" type="submit">Save profile</button><p id="profile-message" class="form-message" role="status"></p></form>
           <form id="password-form" class="panel-card"><h3>Change password</h3><label>New password<input id="new-password" type="password" minlength="12" autocomplete="new-password" required /></label><label>Confirm password<input id="confirm-password" type="password" minlength="12" autocomplete="new-password" required /></label><button class="primary-button" type="submit">Update password</button><p id="password-message" class="form-message" role="status"></p></form>
+          <section class="panel-card" aria-labelledby="mfa-settings-title">
+            <h3 id="mfa-settings-title">Two-step verification</h3>
+            <p id="mfa-status" class="form-message">Checking your security status…</p>
+            <button id="mfa-enrol-button" class="primary-button" type="button">Set up authenticator app</button>
+            <button id="mfa-remove-button" class="secondary-button" type="button" hidden>Remove authenticator</button>
+            <div id="mfa-enrolment" class="mfa-enrolment" hidden>
+              <p>Scan this QR code using Microsoft Authenticator, Google Authenticator, 1Password or a similar app.</p>
+              <img id="mfa-qr-code" alt="QR code for adding AWHI to an authenticator app" />
+              <p class="small-print">Manual setup key: <code id="mfa-secret"></code></p>
+              <label for="mfa-enrol-code">Enter the six-digit code</label>
+              <input id="mfa-enrol-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" />
+              <button id="mfa-confirm-button" class="primary-button" type="button">Confirm and enable</button>
+              <button id="mfa-cancel-button" class="text-button" type="button">Cancel setup</button>
+            </div>
+            <p id="mfa-settings-message" class="form-message" role="status" aria-live="polite"></p>
+          </section>
         </div>
         <div class="panel-card data-controls"><h3>Demo data portability</h3><p>Download the records visible to your practitioner account. Keep the file secure and do not use this while AWHI remains demo-only for real client information.</p><button id="export-demo-data" class="secondary-button" type="button">Download my demo data</button><p id="export-message" class="form-message" role="status"></p></div>
         <div class="client-browser-heading">
