@@ -147,3 +147,5 @@ with check (practitioner_id = auth.uid());
 -- supabase/migrations/20260911100000_complete_demo_clinic.sql
 -- supabase/migrations/20260911120000_database_security_hardening.sql
 -- supabase/migrations/20260911123000_index_access_client.sql
+-- supabase/migrations/20260916113000_enforce_opted_in_mfa.sql
+-- supabase/migrations/20260916114500_fix_mfa_policy_helper.sql
