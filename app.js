@@ -142,7 +142,10 @@ function renderSession(session) {
   authView.hidden = signedIn && !passwordRecoveryMode;
   appView.hidden = !signedIn || passwordRecoveryMode;
   signedInUser.textContent = signedIn ? session.user.email ?? 'Practitioner' : '';
-  if (!signedIn) loginForm.reset();
+  if (!signedIn) {
+    showLoginForm();
+    loginForm.reset();
+  }
   if (signedIn) loadDashboardSummary();
   if (!signedIn) {
     authorisedClients = [];
@@ -625,17 +628,29 @@ mfaChallengeForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   mfaChallengeButton.disabled = true;
   mfaChallengeMessage.textContent = '';
-  const code = mfaChallengeCode.value.trim();
-  const { data, error } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfaChallengeFactorId, code });
-  if (error) {
-    mfaChallengeMessage.textContent = 'That code was not accepted. Wait for a new code and try again.';
+  try {
+    const code = mfaChallengeCode.value.trim();
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfaChallengeFactorId, code });
+    if (error) {
+      mfaChallengeMessage.textContent = 'That code was not accepted. Wait for a new code and try again.';
+      return;
+    }
+
+    // MFA verification saves the upgraded session; its response has no data.session.
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !data?.session?.user) {
+      renderSession(null);
+      authMessage.textContent = 'Your verified session could not be loaded. Please sign in again.';
+      return;
+    }
+
+    mfaChallengeFactorId = null;
+    await checkMfaAndRender(data.session);
+  } catch {
+    mfaChallengeMessage.textContent = 'AWHI could not complete verification. Please try again.';
+  } finally {
     mfaChallengeButton.disabled = false;
-    return;
   }
-  mfaChallengeFactorId = null;
-  mfaChallengeForm.hidden = true;
-  mfaChallengeButton.disabled = false;
-  renderSession(data.session);
 });
 
 mfaSignoutButton.addEventListener('click', async () => {
