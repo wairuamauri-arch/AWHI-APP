@@ -5,15 +5,24 @@ const client = createClient('https://zkdrqrjwzvyxewzyzqid.supabase.co', 'eyJhbGc
 const el = id => document.getElementById(id);
 let factorId = null;
 let busy = false;
+let pendingFactorId = null;
+function clearSetup() {
+  pendingFactorId = null;
+  el('setup').hidden = true;
+  el('secret').value = '';
+  el('qr').removeAttribute('src');
+  el('setup-code').value = '';
+}
 async function run(action) {
   if (busy) return;
   busy = true;
-  ['signin','verify','signout'].forEach(id => el(id).disabled = true);
+  ['signin','verify','signout','enrol','confirm','cancel-setup'].forEach(id => el(id).disabled = true);
   try { await action(); }
   catch { el('status').textContent = 'The test could not finish. Sign out and try again.'; }
-  finally { busy = false; ['signin','verify','signout'].forEach(id => el(id).disabled = false); }
+  finally { busy = false; ['signin','verify','signout','enrol','confirm','cancel-setup'].forEach(id => el(id).disabled = false); }
 }
 async function checkAccess() {
+  el('enrol').hidden = true;
   const { data, error } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
   if (error || !data?.currentLevel) throw new Error('Assurance unavailable');
   el('signout').hidden = false;
@@ -33,8 +42,9 @@ async function checkAccess() {
     el('status').textContent = 'Sign-in accepted, but restored-record access did not pass. Tell Manaaki this message.';
     return;
   }
+  el('enrol').hidden = data.nextLevel === 'aal2';
   el('status').textContent = 'PASS — recovery sign-in and record access.\n' +
-    (data.currentLevel === 'aal2' ? 'Authenticator verified.' : 'Password-only session; MFA has not been verified in this session.') +
+    (data.currentLevel === 'aal2' ? 'Authenticator verified. Sign out, then sign in again to test the code prompt.' : 'Password-only session; MFA has not been verified in this session.') +
     '\nPractitioner profile: ' + results[0].count + '\nClients: ' + results[1].count +
     '\nNotes: ' + results[2].count + '\nAppointments: ' + results[3].count +
     '\nThis result does not certify the full recovery exercise.';
@@ -65,9 +75,50 @@ el('signout').addEventListener('click', () => run(async () => {
   const { error } = await client.auth.signOut({ scope: 'local' });
   if (error) throw error;
   factorId = null;
+  clearSetup();
+  el('enrol').hidden = true;
   el('login').reset(); el('mfa').reset();
   el('login').hidden = false; el('mfa').hidden = true; el('signout').hidden = true;
   el('status').textContent = 'Signed out of the recovery test.';
 }));
 el('signin').disabled = false;
 el('status').textContent = 'Ready to test the recovery copy.';
+
+el('enrol').addEventListener('click', () => run(async () => {
+  const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (assurance.error || !assurance.data?.currentLevel) throw new Error('Session unavailable');
+  if (assurance.data.nextLevel === 'aal2') { await checkAccess(); return; }
+  if (pendingFactorId) { el('setup').hidden = false; return; }
+  const { data, error } = await client.auth.mfa.enroll({
+    factorType: 'totp', friendlyName: 'AWHI Recovery Test ' + Date.now(), issuer: 'AWHI Recovery Test'
+  });
+  if (error || !data?.totp) { el('status').textContent = 'Authenticator setup could not start. Sign out and try again.'; return; }
+  pendingFactorId = data.id;
+  el('secret').value = data.totp.secret;
+  el('qr').src = data.totp.qr_code;
+  el('setup').hidden = false;
+  el('enrol').hidden = true;
+  el('status').textContent = 'Add the recovery account to your authenticator, then enter its current code below.';
+}));
+el('confirm-setup').addEventListener('submit', event => {
+  event.preventDefault();
+  run(async () => {
+    const code = el('setup-code').value.trim();
+    if (!pendingFactorId || !/^[0-9]{6}$/.test(code)) {
+      el('status').textContent = 'Enter the six-digit code from your new recovery authenticator.'; return;
+    }
+    const { error } = await client.auth.mfa.challengeAndVerify({ factorId: pendingFactorId, code });
+    el('setup-code').value = '';
+    if (error) { el('status').textContent = 'Code not accepted. Wait for a new code and try again.'; return; }
+    clearSetup();
+    await checkAccess();
+  });
+});
+el('cancel-setup').addEventListener('click', () => run(async () => {
+  if (pendingFactorId) {
+    const { error } = await client.auth.mfa.unenroll({ factorId: pendingFactorId });
+    if (error) { el('status').textContent = 'Setup could not be cancelled. Retry, or sign out.'; return; }
+  }
+  clearSetup();
+  await checkAccess();
+}));
